@@ -51,7 +51,8 @@
 (defn fail [& more] (print* 1 ansi/bold-red    more))
 
 (def cygwin?
-  (-> (sh/sh "uname" "-s") :out str .trim .toLowerCase (.startsWith "cygwin")))
+  (try (-> (sh/sh "uname" "-s") :out str .trim .toLowerCase (.startsWith "cygwin"))
+       (catch Throwable _)))
 
 (defn set-cygwin-tty
   []
