@@ -420,6 +420,63 @@
         (file/copy-with-lastmod (io/file p) (io/file tgt p)))
       (-> fileset (core/add-resource tgt) core/commit!))))
 
+(core/deftask run
+  "Run a function in a namespace.
+
+  The --main option specifies the function to run. If the --main option SYM is
+  namespace-qualified the namespace will be required for you.
+
+  The --arg options specify arguments to pass to the main function. The --arg
+  option EDN will be parsed with read-string, so keep shell quoting in mind.
+
+  For instance, passing the string \"foo\" as an argument:
+
+      boot run --main my.ns/my-fn --arg \\\"foo\\\"
+
+  because read-string expects double quotes around a string but the shell
+  interprets double quotes, necessitating the backslash escapes.
+
+  The --shutdown option specifies a function to run when the boot pipeline
+  finishes. This can be e.g. to stop a server. If the --shutdown option SYM is
+  namespace-qualified the namespace will be required for you. This is useful
+  for asynchronous main functions.
+
+  **NOTE**: the main function will be called only once per pipeline, so if you
+  have a main function that runs itself in a background thread you can compose
+  this task with the watch task and the main function won't be called again
+  each time a file changes."
+
+  [m main SYM          sym         "The main function symbol to resolve and run."
+   a arg EDN           [edn]       "The argument vector to pass to the main function."
+   s shutdown SYM      sym         "The shutdown function symbol to resolve and call."
+   d dependency ID:VER [[sym str]] "The vector of additional dependencies for the launcher pod."]
+
+  (let [dep (->> dependency 
+                 (map (fn [[x y]]
+                        (if (not (empty? y))
+                          [x y]
+                          [x "RELEASE"]))))
+        pod (-> (core/get-env)
+                (update-in [:dependencies] into dep)
+                pod/make-pod
+                future)
+        run (delay
+              (pod/with-eval-in @pod
+                (do (boot.util/info "<< running main fn %s >>\n" '~main)
+                    ~(when-let [ns (namespace main)]
+                       `(require '~(symbol ns)))
+                    (apply ~main ~(or arg [])))))]
+    (core/cleanup
+      (when shutdown
+        (pod/with-eval-in @pod
+          (do (boot.util/info "<< running shutdown fn %s >>\n" '~shutdown)
+              ~(when-let [ns (namespace shutdown)]
+                 `(require '~(symbol ns)))
+              (~shutdown)))))
+    (core/with-pre-wrap fileset
+      (when main @run)
+      fileset)))
+
 (core/deftask uber
   "Add jar entries from dependencies to fileset.
 
