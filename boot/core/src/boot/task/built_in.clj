@@ -661,6 +661,16 @@
               (boot.jar/spit-zip! ~(.getPath zipfile) ~index))
             (-> fileset (core/add-resource tgt) core/commit!)))))))
 
+(core/deftask dump
+  "Dump the fileset to the target directory."
+  [t target PATH str "The path to the target directory (./target)."]
+  (let [dir (io/file (or target "target"))]
+    (core/with-pre-wrap fileset
+      (util/with-let [fileset fileset]
+        (util/info "Dumping to %s...\n" (.getPath dir))
+        (apply file/sync! :time dir (core/output-dirs fileset))
+        (file/delete-empty-subdirs! dir)))))
+
 (core/deftask install
   "Install project jar to local Maven repository.
 

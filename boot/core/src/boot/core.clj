@@ -543,7 +543,6 @@
              :source-paths     #{}
              :resource-paths   #{}
              :asset-paths      #{}
-             :target-path      "target"
              :repositories     [["clojars"       "https://clojars.org/repo/"]
                                 ["maven-central" "https://repo1.maven.org/maven2/"]]})
     (add-watch ::boot #(configure!* %3 %4)))
@@ -677,22 +676,12 @@
           (let [[opts argv] (parse-task-opts args spec)]
             (recur (conj ret (apply (var-get op) opts)) argv)))))))
 
-(defn- sync-target
-  "FIXME: document"
-  [before after]
-  (let [tgt  (get-env :target-path)
-        diff (fileset-diff before after)]
-    (when (seq (output-files diff))
-      (binding [file/*hard-link* false]
-        (apply file/sync! :time tgt (output-dirs after)))
-      (file/delete-empty-subdirs! tgt))))
-
 (defn- run-tasks
   "FIXME: document"
   [task-stack]
   (binding [*warnings* (atom 0)]
     (let [fs (commit! (reset-fileset))]
-      ((task-stack #(do (sync-target fs %) (sync-user-dirs!) %)) fs))))
+      ((task-stack #(do (sync-user-dirs!) %)) fs))))
 
 (defn boot
   "The REPL equivalent to the command line 'boot'. If all arguments are

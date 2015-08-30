@@ -29,7 +29,6 @@
    ["-q" "--quiet"               "Suppress output from boot itself."]
    ["-s" "--source-paths PATH"   "Add PATH to set of source directories."
     :assoc-fn #(update-in %1 [%2] (fnil conj #{}) %3)]
-   ["-t" "--target-path PATH"    "Set the target directory to PATH."]
    ["-u" "--update"              "Update boot to latest release version."]
    ["-v" "--verbose"             "More error info (-vv more verbose, etc.)"
     :assoc-fn (fn [x y _] (update-in x [y] (fnil inc 0)))]
@@ -140,7 +139,7 @@
               bootforms   (some->> arg0 slurp util/read-string-all)
               userforms   (when profile?
                             (some->> userscript slurp util/read-string-all))
-              initial-env (->> [:source-paths :resource-paths :asset-paths :target-path :dependencies]
+              initial-env (->> [:source-paths :resource-paths :asset-paths :dependencies]
                             (reduce #(if-let [v (opts %2)] (assoc %1 %2 v) %1) {})
                             (merge {} (:set-env opts)))
               import-ns   (export-task-namespaces initial-env)
