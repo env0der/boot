@@ -174,9 +174,12 @@
   (let [strip? #(and (not @*colorize?*) (string? %))
         strip  #(fn [s] (if (strip? s) (ansi/strip-ansi s) s))]
     (proxy [java.io.PrintWriter] [writer]
-      (write [s]
-        (.write writer ((strip) s))
-        (.flush writer)))))
+      (write
+          ([s off len]
+           (.write writer s off len))
+        ([s]
+         (.write writer ((strip) s))
+         (.flush writer))))))
 
 (defn extract-ids
   [sym]
